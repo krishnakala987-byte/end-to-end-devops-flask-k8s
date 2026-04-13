@@ -43,5 +43,5 @@ jobs:
 
       - name: Deploy to EKS
         run: |
-          kubectl set image deployment/flask-app flask-container=krishna2915/flask-app:latest
+          kubectl set image deployment/flask-app flask-app=krishna2915/flask-app:latest
           kubectl rollout status deployment/flask-app
