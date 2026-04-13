@@ -1,4 +1,4 @@
-name: CI/CD to Kubernetes
+name: CI/CD Pipeline
 
 on:
   push:
@@ -6,33 +6,42 @@ on:
       - main
 
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
 
-    - name: Install dependencies
-      run: pip install -r requirements.txt
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
 
-    - name: Run tests
-      run: pytest tests
+      - name: Install dependencies
+        run: pip install -r requirements.txt
 
-    - name: Login to Docker Hub
-      run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+      - name: Login to Docker Hub
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
 
-    - name: Build Docker image
-      run: docker build -t ${{ secrets.DOCKER_USERNAME }}/flask-app:latest .
+      - name: Build Docker image
+        run: docker build -t krishna2915/flask-app:latest .
 
-    - name: Push Docker image
-      run: docker push ${{ secrets.DOCKER_USERNAME }}/flask-app:latest
+      - name: Push Docker image
+        run: docker push krishna2915/flask-app:latest
 
-    - name: Setup kubeconfig
-      run: |
-        mkdir -p ~/.kube
-        echo "${{ secrets.KUBE_CONFIG }}" > ~/.kube/config
+      #  NEW PART (VERY IMPORTANT)
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: us-east-1
 
-    - name: Deploy to Kubernetes
-      run: |
-        kubectl set image deployment/flask-app flask-container=${{ secrets.DOCKER_USERNAME }}/flask-app:latest
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --region us-east-1 --name flask-cluster
+
+      - name: Deploy to EKS
+        run: |
+          kubectl set image deployment/flask-app flask-container=krishna2915/flask-app:latest
+          kubectl rollout status deployment/flask-app
