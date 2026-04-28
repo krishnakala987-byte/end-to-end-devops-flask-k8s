@@ -1,4 +1,3 @@
-# README.md
 
 # End-to-End DevOps Flask App (Docker + Kubernetes + EKS + CI/CD)
 
